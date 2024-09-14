@@ -90,16 +90,16 @@
 
     <script>
         // Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyCpABzfBHjI-WMLWUOh3yfe54874iavX90",
-  authDomain: "indian-food-zh.firebaseapp.com",
-  projectId: "indian-food-zh",
-  storageBucket: "indian-food-zh.appspot.com",
-  messagingSenderId: "222021502944",
-  appId: "1:222021502944:web:4c85a90dc3900dc15f0d85",
-  measurementId: "G-8EVQQGDWEG"
-};
-
+        const firebaseConfig = {
+          apiKey: "AIzaSyCpABzfBHjI-WMLWUOh3yfe54874iavX90",
+          authDomain: "indian-food-zh.firebaseapp.com",
+          databaseURL: "https://indian-food-zh-default-rtdb.europe-west1.firebasedatabase.app", // Updated this line
+          projectId: "indian-food-zh",
+          storageBucket: "indian-food-zh.appspot.com",
+          messagingSenderId: "222021502944",
+          appId: "1:222021502944:web:4c85a90dc3900dc15f0d85",
+          measurementId: "G-8EVQQGDWEG"
+        };
 
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
@@ -145,13 +145,21 @@ const firebaseConfig = {
         }
 
         function addRestaurant(name) {
+            console.log('Attempting to add restaurant:', name);
             const newRestaurantRef = database.ref('restaurants').push();
             const newRestaurant = {
                 name: name,
                 dishes: {},
                 averageScore: 0
             };
-            newRestaurantRef.set(newRestaurant);
+            newRestaurantRef.set(newRestaurant)
+                .then(() => {
+                    console.log('Restaurant added successfully:', name);
+                })
+                .catch((error) => {
+                    console.error('Error adding restaurant:', error);
+                    alert('Failed to add restaurant. Error: ' + error.message);
+                });
         }
 
         function addDish(restaurantKey, restaurantElement) {
@@ -204,9 +212,11 @@ const firebaseConfig = {
             const nameInput = document.getElementById('newRestaurantInput');
             const name = nameInput.value.trim();
             if (name) {
+                console.log('Add restaurant button clicked. Name:', name);
                 addRestaurant(name);
                 nameInput.value = '';
             } else {
+                console.log('Add restaurant button clicked, but no name provided');
                 alert('Please enter a restaurant name');
             }
         });
