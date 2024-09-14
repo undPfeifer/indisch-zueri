@@ -14,7 +14,7 @@
 
         body {
             font-family: 'Monument Grotesk', sans-serif;
-            max-width: 800px;
+            max-width: 400px;
             margin: 0 auto;
             padding: 20px;
             background-color: #ffffff;
@@ -36,13 +36,13 @@
         .restaurant-name {
             font-size: 40px;
             font-weight: bold;
-            line-height: 0.9;
+            line-height: 1;
             margin: 0;
         }
 
         .restaurant-score {
             font-size: 32px;
-            border: 1px solid black;
+            border: 2px solid black;
             padding: 10px;
             line-height: 1;
         }
@@ -54,11 +54,15 @@
         }
 
         .food-item {
+            border-top: 1px solid black;
+            padding: 15px 0;
+            cursor: pointer;
+        }
+
+        .food-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-top: 1px solid black;
-            padding: 15px 0;
         }
 
         .food-name {
@@ -67,9 +71,60 @@
         }
 
         .food-score {
-            font-size: 24px;
             border: 1px solid black;
             padding: 5px 10px;
+            display: inline-block;
+        }
+
+        .food-score-number {
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .food-score-max {
+            font-size: 24px;
+        }
+
+        .food-details {
+            display: none;
+            margin-top: 10px;
+        }
+
+        .food-ratings {
+            display: flex;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .rating-item {
+            margin-right: 20px;
+            margin-bottom: 10px;
+        }
+
+        .rating-label {
+            font-size: 18px;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .rating-value {
+            font-size: 24px;
+            border: 1px solid black;
+            padding: 3px 8px;
+            width: 80px;
+            display: inline-block;
+        }
+
+        .delivery-time {
+            font-size: 24px;
+            margin-top: 10px;
+        }
+
+        .delivery-time-input {
+            font-size: 24px;
+            border: 1px solid black;
+            padding: 3px 8px;
+            width: 80px;
         }
 
         .add-form {
@@ -118,6 +173,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
+        // Firebase configuration remains the same
         const firebaseConfig = {
           apiKey: "AIzaSyCpABzfBHjI-WMLWUOh3yfe54874iavX90",
           authDomain: "indian-food-zh.firebaseapp.com",
@@ -145,7 +201,6 @@
                 <ul class="food-list"></ul>
                 <div class="add-form">
                     <input type="text" class="foodNameInput" placeholder="Dish name">
-                    <input type="number" class="foodScoreInput" placeholder="Score (0-10)" min="0" max="10" step="0.1">
                     <button class="addDishButton">Add Dish</button>
                 </div>
             `;
@@ -153,7 +208,7 @@
             const foodList = restaurantDiv.querySelector('.food-list');
             for (let dishKey in restaurant.dishes) {
                 const dish = restaurant.dishes[dishKey];
-                const dishElement = createDishElement(dish);
+                const dishElement = createDishElement(dish, key, dishKey);
                 foodList.appendChild(dishElement);
             }
 
@@ -164,69 +219,113 @@
             return restaurantDiv;
         }
 
-        function createDishElement(dish) {
+        function createDishElement(dish, restaurantKey, dishKey) {
             const li = document.createElement('li');
             li.className = 'food-item';
+            const overallScore = calculateOverallScore(dish);
             li.innerHTML = `
-                <span class="food-name">${dish.name}</span>
-                <span class="food-score">${dish.score.toFixed(1)}/10</span>
+                <div class="food-header">
+                    <span class="food-name">${dish.name}</span>
+                    <div class="food-score">
+                        <span class="food-score-number">${overallScore.toFixed(1)}</span><span class="food-score-max">/10</span>
+                    </div>
+                </div>
+                <div class="food-details">
+                    <div class="food-ratings">
+                        ${createRatingInputs(dish, restaurantKey, dishKey)}
+                    </div>
+                    <div class="delivery-time">
+                        <span class="rating-label">Lieferzeit:</span>
+                        ${editMode 
+                            ? `<input type="number" class="delivery-time-input" value="${dish.deliveryTime || ''}" min="0">`
+                            : `<span class="rating-value">${dish.deliveryTime || ''}</span>`
+                        }
+                        <span>min</span>
+                    </div>
+                </div>
             `;
+            li.addEventListener('click', function(e) {
+                if (!e.target.closest('.food-details')) {
+                    this.querySelector('.food-details').style.display = 
+                        this.querySelector('.food-details').style.display === 'none' ? 'block' : 'none';
+                }
+            });
             return li;
         }
 
-        function addRestaurant(name) {
-            console.log('Attempting to add restaurant:', name);
-            const newRestaurantRef = database.ref('restaurants').push();
-            const newRestaurant = {
-                name: name,
-                dishes: {},
-                averageScore: 0
-            };
-            newRestaurantRef.set(newRestaurant)
-                .then(() => {
-                    console.log('Restaurant added successfully:', name);
-                })
-                .catch((error) => {
-                    console.error('Error adding restaurant:', error);
-                    alert('Failed to add restaurant. Error: ' + error.message);
-                });
+        function createRatingInputs(dish, restaurantKey, dishKey) {
+            const ratings = ['reis', 'sauce', 'scharf', 'delivery'];
+            return ratings.map(rating => `
+                <div class="rating-item">
+                    <span class="rating-label">${rating}:</span>
+                    ${editMode
+                        ? `<input type="number" class="rating-value" data-rating="${rating}" 
+                             value="${dish[rating] || ''}" min="0" max="10" step="0.1">`
+                        : `<span class="rating-value">${dish[rating] || ''}</span>`
+                    }
+                </div>
+            `).join('') + (editMode ? `
+                <button class="update-ratings" data-restaurant="${restaurantKey}" data-dish="${dishKey}">
+                    Update Ratings
+                </button>
+            ` : '');
+        }
+
+        function calculateOverallScore(dish) {
+            const ratings = ['reis', 'sauce', 'scharf', 'delivery'];
+            const validRatings = ratings.filter(rating => dish[rating] !== undefined);
+            if (validRatings.length === 0) return 0;
+            const sum = validRatings.reduce((total, rating) => total + dish[rating], 0);
+            return sum / validRatings.length;
         }
 
         function addDish(restaurantKey, restaurantElement) {
             const nameInput = restaurantElement.querySelector('.foodNameInput');
-            const scoreInput = restaurantElement.querySelector('.foodScoreInput');
             const name = nameInput.value.trim();
-            const score = parseFloat(scoreInput.value);
 
             if (name === '') {
-                alert('No name input');
-                return;
-            }
-            if (isNaN(score) || score < 0 || score > 10) {
-                alert('Please enter a valid score between 0 and 10');
+                alert('Please enter a dish name');
                 return;
             }
 
             const newDishRef = database.ref(`restaurants/${restaurantKey}/dishes`).push();
-            newDishRef.set({ name, score });
+            newDishRef.set({ name });
 
             nameInput.value = '';
-            scoreInput.value = '';
+        }
+
+        function updateDishRatings(restaurantKey, dishKey, ratings, deliveryTime) {
+            const updates = {};
+            for (let rating in ratings) {
+                if (ratings[rating] !== '') {
+                    updates[`restaurants/${restaurantKey}/dishes/${dishKey}/${rating}`] = parseFloat(ratings[rating]);
+                }
+            }
+            if (deliveryTime !== '') {
+                updates[`restaurants/${restaurantKey}/dishes/${dishKey}/deliveryTime`] = parseInt(deliveryTime);
+            }
+            database.ref().update(updates);
         }
 
         function updateAverageScore(restaurantKey, dishes) {
             const dishArray = Object.values(dishes);
-            const total = dishArray.reduce((sum, dish) => sum + dish.score, 0);
+            const total = dishArray.reduce((sum, dish) => sum + calculateOverallScore(dish), 0);
             const average = dishArray.length > 0 ? total / dishArray.length : 0;
             database.ref(`restaurants/${restaurantKey}/averageScore`).set(average);
         }
 
         function toggleEditMode() {
             editMode = !editMode;
-            const addForms = document.querySelectorAll('.add-form');
-            addForms.forEach(form => {
-                form.style.display = editMode ? 'block' : 'none';
+            const restaurantsDiv = document.getElementById('restaurants');
+            restaurantsDiv.innerHTML = '';
+            database.ref('restaurants').once('value', (snapshot) => {
+                snapshot.forEach((childSnapshot) => {
+                    const restaurant = childSnapshot.val();
+                    const restaurantElement = createRestaurantElement(restaurant, childSnapshot.key);
+                    restaurantsDiv.appendChild(restaurantElement);
+                });
             });
+            
             document.getElementById('editButton').textContent = editMode ? 'Done' : 'Edit';
         }
 
@@ -237,6 +336,24 @@
                 const restaurant = childSnapshot.val();
                 const restaurantElement = createRestaurantElement(restaurant, childSnapshot.key);
                 restaurantsDiv.appendChild(restaurantElement);
+            });
+
+            // Add event listeners for update buttons
+            document.querySelectorAll('.update-ratings').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const restaurantKey = e.target.dataset.restaurant;
+                    const dishKey = e.target.dataset.dish;
+                    const ratingInputs = e.target.parentElement.querySelectorAll('.rating-value');
+                    const deliveryTimeInput = e.target.parentElement.parentElement.querySelector('.delivery-time-input');
+                    
+                    const ratings = {};
+                    ratingInputs.forEach(input => {
+                        ratings[input.dataset.rating] = input.value;
+                    });
+                    
+                    updateDishRatings(restaurantKey, dishKey, ratings, deliveryTimeInput.value);
+                });
             });
         });
 
