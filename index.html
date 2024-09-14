@@ -14,7 +14,7 @@
 
         body {
             font-family: 'Monument Grotesk', sans-serif;
-            max-width: 400px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             background-color: #ffffff;
@@ -34,14 +34,14 @@
         }
 
         .restaurant-name {
-            font-size: 40px;
+            font-size: 64px;
             font-weight: bold;
             line-height: 1;
             margin: 0;
         }
 
         .restaurant-score {
-            font-size: 32px;
+            font-size: 36px;
             border: 2px solid black;
             padding: 10px;
             line-height: 1;
@@ -56,17 +56,17 @@
         .food-item {
             border-top: 1px solid black;
             padding: 15px 0;
-            cursor: pointer;
         }
 
         .food-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: pointer;
         }
 
         .food-name {
-            font-size: 32px;
+            font-size: 36px;
             font-weight: bold;
         }
 
@@ -173,7 +173,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        // Firebase configuration remains the same
         const firebaseConfig = {
           apiKey: "AIzaSyCpABzfBHjI-WMLWUOh3yfe54874iavX90",
           authDomain: "indian-food-zh.firebaseapp.com",
@@ -199,7 +198,7 @@
                     <div class="restaurant-score">${restaurant.averageScore.toFixed(1)}/10</div>
                 </div>
                 <ul class="food-list"></ul>
-                <div class="add-form">
+                <div class="add-form" style="display: ${editMode ? 'block' : 'none'}">
                     <input type="text" class="foodNameInput" placeholder="Dish name">
                     <button class="addDishButton">Add Dish</button>
                 </div>
@@ -212,7 +211,6 @@
                 foodList.appendChild(dishElement);
             }
 
-            const addForm = restaurantDiv.querySelector('.add-form');
             const addDishButton = restaurantDiv.querySelector('.addDishButton');
             addDishButton.addEventListener('click', () => addDish(key, restaurantDiv));
 
@@ -230,7 +228,7 @@
                         <span class="food-score-number">${overallScore.toFixed(1)}</span><span class="food-score-max">/10</span>
                     </div>
                 </div>
-                <div class="food-details">
+                <div class="food-details" style="display: none;">
                     <div class="food-ratings">
                         ${createRatingInputs(dish, restaurantKey, dishKey)}
                     </div>
@@ -242,14 +240,26 @@
                         }
                         <span>min</span>
                     </div>
+                    ${editMode ? `
+                        <button class="update-ratings" data-restaurant="${restaurantKey}" data-dish="${dishKey}">
+                            Update Ratings
+                        </button>
+                    ` : ''}
                 </div>
             `;
-            li.addEventListener('click', function(e) {
-                if (!e.target.closest('.food-details')) {
-                    this.querySelector('.food-details').style.display = 
-                        this.querySelector('.food-details').style.display === 'none' ? 'block' : 'none';
-                }
+            li.querySelector('.food-header').addEventListener('click', function(e) {
+                const details = this.nextElementSibling;
+                details.style.display = details.style.display === 'none' ? 'block' : 'none';
             });
+
+            if (editMode) {
+                const updateButton = li.querySelector('.update-ratings');
+                updateButton.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    updateDishRatings(restaurantKey, dishKey, li);
+                });
+            }
+
             return li;
         }
 
@@ -264,18 +274,14 @@
                         : `<span class="rating-value">${dish[rating] || ''}</span>`
                     }
                 </div>
-            `).join('') + (editMode ? `
-                <button class="update-ratings" data-restaurant="${restaurantKey}" data-dish="${dishKey}">
-                    Update Ratings
-                </button>
-            ` : '');
+            `).join('');
         }
 
         function calculateOverallScore(dish) {
             const ratings = ['reis', 'sauce', 'scharf', 'delivery'];
-            const validRatings = ratings.filter(rating => dish[rating] !== undefined);
+            const validRatings = ratings.filter(rating => dish[rating] !== undefined && dish[rating] !== '');
             if (validRatings.length === 0) return 0;
-            const sum = validRatings.reduce((total, rating) => total + dish[rating], 0);
+            const sum = validRatings.reduce((total, rating) => total + parseFloat(dish[rating]), 0);
             return sum / validRatings.length;
         }
 
@@ -294,17 +300,31 @@
             nameInput.value = '';
         }
 
-        function updateDishRatings(restaurantKey, dishKey, ratings, deliveryTime) {
+        function updateDishRatings(restaurantKey, dishKey, dishElement) {
+            const ratingInputs = dishElement.querySelectorAll('.rating-value');
+            const deliveryTimeInput = dishElement.querySelector('.delivery-time-input');
+            
             const updates = {};
-            for (let rating in ratings) {
-                if (ratings[rating] !== '') {
-                    updates[`restaurants/${restaurantKey}/dishes/${dishKey}/${rating}`] = parseFloat(ratings[rating]);
+            ratingInputs.forEach(input => {
+                const rating = input.dataset.rating;
+                const value = input.value.trim();
+                if (value !== '') {
+                    updates[`restaurants/${restaurantKey}/dishes/${dishKey}/${rating}`] = parseFloat(value);
                 }
-            }
+            });
+
+            const deliveryTime = deliveryTimeInput.value.trim();
             if (deliveryTime !== '') {
                 updates[`restaurants/${restaurantKey}/dishes/${dishKey}/deliveryTime`] = parseInt(deliveryTime);
             }
-            database.ref().update(updates);
+
+            database.ref().update(updates)
+                .then(() => {
+                    console.log('Ratings updated successfully');
+                })
+                .catch((error) => {
+                    console.error('Error updating ratings:', error);
+                });
         }
 
         function updateAverageScore(restaurantKey, dishes) {
@@ -316,6 +336,11 @@
 
         function toggleEditMode() {
             editMode = !editMode;
+            renderRestaurants();
+            document.getElementById('editButton').textContent = editMode ? 'Done' : 'Edit';
+        }
+
+        function renderRestaurants() {
             const restaurantsDiv = document.getElementById('restaurants');
             restaurantsDiv.innerHTML = '';
             database.ref('restaurants').once('value', (snapshot) => {
@@ -325,36 +350,10 @@
                     restaurantsDiv.appendChild(restaurantElement);
                 });
             });
-            
-            document.getElementById('editButton').textContent = editMode ? 'Done' : 'Edit';
         }
 
         database.ref('restaurants').on('value', (snapshot) => {
-            const restaurantsDiv = document.getElementById('restaurants');
-            restaurantsDiv.innerHTML = '';
-            snapshot.forEach((childSnapshot) => {
-                const restaurant = childSnapshot.val();
-                const restaurantElement = createRestaurantElement(restaurant, childSnapshot.key);
-                restaurantsDiv.appendChild(restaurantElement);
-            });
-
-            // Add event listeners for update buttons
-            document.querySelectorAll('.update-ratings').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const restaurantKey = e.target.dataset.restaurant;
-                    const dishKey = e.target.dataset.dish;
-                    const ratingInputs = e.target.parentElement.querySelectorAll('.rating-value');
-                    const deliveryTimeInput = e.target.parentElement.parentElement.querySelector('.delivery-time-input');
-                    
-                    const ratings = {};
-                    ratingInputs.forEach(input => {
-                        ratings[input.dataset.rating] = input.value;
-                    });
-                    
-                    updateDishRatings(restaurantKey, dishKey, ratings, deliveryTimeInput.value);
-                });
-            });
+            renderRestaurants();
         });
 
         database.ref('restaurants').on('child_changed', (snapshot) => {
@@ -363,6 +362,9 @@
         });
 
         document.getElementById('editButton').addEventListener('click', toggleEditMode);
+
+        // Initial render
+        renderRestaurants();
     </script>
 </body>
 </html>
