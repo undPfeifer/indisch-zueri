@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Menus</title>
+    <style>
+        /* ... (previous CSS remains unchanged) ... */
+    </style>
+</head>
+<body>
+    <div id="restaurants"></div>
+
+    <div class="add-form">
+        <input type="text" id="newRestaurantInput" placeholder="New restaurant name">
+        <button id="addRestaurantButton">Add Restaurant</button>
+    </div>
+
+    <!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <!-- Add Firebase products that you want to use -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            // Replace with your actual Firebase config object
+            apiKey: "AIzaSyCpABzfBHjI-WMLWUOh3yfe54874iavX90",
+            authDomain: "indian-food-zh.firebaseapp.com",
+            projectId: "indian-food-zh",
+            storageBucket: "indian-food-zh.appspot.com",
+            messagingSenderId: "222021502944",
+            appId: "1:222021502944:web:4c85a90dc3900dc15f0d85",
+            measurementId: "G-8EVQQGDWEG"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+
+        // Get a reference to the database service
+        const database = firebase.database();
+
+        function createRestaurantElement(restaurant, key) {
+            const restaurantDiv = document.createElement('div');
+            restaurantDiv.className = 'restaurant';
+            restaurantDiv.innerHTML = `
+                <div class="restaurant-name">${restaurant.name}</div>
+                <div class="restaurant-score">${restaurant.averageScore.toFixed(1)} /10</div>
+                <ul class="food-list"></ul>
+                <div class="add-form">
+                    <input type="text" class="foodNameInput" placeholder="Dish name">
+                    <input type="number" class="foodScoreInput" placeholder="Score (0-10)" min="0" max="10" step="0.1">
+                    <button class="addDishButton">Add Dish</button>
+                </div>
+            `;
+
+            const foodList = restaurantDiv.querySelector('.food-list');
+            for (let dishKey in restaurant.dishes) {
+                const dish = restaurant.dishes[dishKey];
+                const dishElement = createDishElement(dish);
+                foodList.appendChild(dishElement);
+            }
+
+            const addDishButton = restaurantDiv.querySelector('.addDishButton');
+            addDishButton.addEventListener('click', () => addDish(key, restaurantDiv));
+
+            return restaurantDiv;
+        }
+
+        function createDishElement(dish) {
+            const li = document.createElement('li');
+            li.className = 'food-item';
+            li.innerHTML = `
+                <span class="food-name">${dish.name}</span>
+                <span class="food-score">${dish.score.toFixed(1)} /10</span>
+            `;
+            return li;
+        }
+
+        function addRestaurant(name) {
+            const newRestaurantRef = database.ref('restaurants').push();
+            const newRestaurant = {
+                name: name,
+                dishes: {},
+                averageScore: 0
+            };
+            newRestaurantRef.set(newRestaurant);
+        }
+
+        function addDish(restaurantKey, restaurantElement) {
+            const nameInput = restaurantElement.querySelector('.foodNameInput');
+            const scoreInput = restaurantElement.querySelector('.foodScoreInput');
+            const name = nameInput.value.trim();
+            const score = parseFloat(scoreInput.value);
+
+            if (name === '') {
+                alert('No name input');
+                return;
+            }
+            if (isNaN(score) || score < 0 || score > 10) {
+                alert('Please enter a valid score between 0 and 10');
+                return;
+            }
+
+            const newDishRef = database.ref(`restaurants/${restaurantKey}/dishes`).push();
+            newDishRef.set({ name, score });
+
+            nameInput.value = '';
+            scoreInput.value = '';
+        }
+
+        function updateAverageScore(restaurantKey, dishes) {
+            const dishArray = Object.values(dishes);
+            const total = dishArray.reduce((sum, dish) => sum + dish.score, 0);
+            const average = dishArray.length > 0 ? total / dishArray.length : 0;
+            database.ref(`restaurants/${restaurantKey}/averageScore`).set(average);
+        }
+
+        // Load restaurants from Firebase
+        database.ref('restaurants').on('value', (snapshot) => {
+            const restaurantsDiv = document.getElementById('restaurants');
+            restaurantsDiv.innerHTML = '';
+            snapshot.forEach((childSnapshot) => {
+                const restaurant = childSnapshot.val();
+                const restaurantElement = createRestaurantElement(restaurant, childSnapshot.key);
+                restaurantsDiv.appendChild(restaurantElement);
+            });
+        });
+
+        // Listen for changes in dishes and update average score
+        database.ref('restaurants').on('child_changed', (snapshot) => {
+            const restaurant = snapshot.val();
+            updateAverageScore(snapshot.key, restaurant.dishes);
+        });
+
+        document.getElementById('addRestaurantButton').addEventListener('click', () => {
+            const nameInput = document.getElementById('newRestaurantInput');
+            const name = nameInput.value.trim();
+            if (name) {
+                addRestaurant(name);
+                nameInput.value = '';
+            } else {
+                alert('Please enter a restaurant name');
+            }
+        });
+    </script>
+</body>
+</html>
