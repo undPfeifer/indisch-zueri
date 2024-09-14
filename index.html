@@ -5,7 +5,74 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurant Menus</title>
     <style>
-        /* ... (previous CSS remains unchanged) ... */
+        @font-face {
+            font-family: 'Monument Grotesk';
+            src: url('MonumentGrotesk-Bold.woff2') format('woff2'),
+                 url('MonumentGrotesk-Bold.woff') format('woff');
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        body {
+            font-family: 'Monument Grotesk', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .restaurant {
+            margin-bottom: 40px;
+            border-bottom: 2px solid black;
+            padding-bottom: 20px;
+        }
+
+        .restaurant-name {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .restaurant-score {
+            font-size: 36px;
+            border: 2px solid black;
+            padding: 10px;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .food-list {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .food-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid black;
+            padding: 15px 0;
+        }
+
+        .food-name {
+            font-size: 24px;
+        }
+
+        .food-score {
+            font-size: 18px;
+            border: 1px solid black;
+            padding: 5px 10px;
+        }
+
+        .add-form {
+            margin-top: 20px;
+        }
+
+        input, button {
+            font-family: 'Monument Grotesk', sans-serif;
+            font-size: 16px;
+            padding: 5px;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -24,7 +91,6 @@
     <script>
         // Your web app's Firebase configuration
         const firebaseConfig = {
-            // Replace with your actual Firebase config object
             apiKey: "AIzaSyCpABzfBHjI-WMLWUOh3yfe54874iavX90",
             authDomain: "indian-food-zh.firebaseapp.com",
             projectId: "indian-food-zh",
