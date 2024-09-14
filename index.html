@@ -14,17 +14,18 @@
 
         body {
             font-family: 'Monument Grotesk', sans-serif;
-            max-width: 800px;
+            letter-spacing: -3%;
+            line-height: 90%;
+
+            max-width: 400px;
             margin: 0 auto;
             padding: 20px;
             background-color: #ffffff;
         }
 
         .restaurant {
-            margin-bottom: 40px;
-            border-bottom: 1px solid black;
-            padding-bottom: 20px;
-        }
+        margin-bottom: 40px;
+        padding-bottom: 0; /* Remove bottom padding */}
 
         .restaurant-header {
             display: flex;
@@ -34,29 +35,36 @@
         }
 
         .restaurant-name {
-            font-size: 64px;
+            font-size: 40px;
             font-weight: bold;
-            line-height: 1;
+            line-height: 0.9;
             margin: 0;
         }
 
         .restaurant-score {
-            font-size: 36px;
-            border: 2px solid black;
+            font-size: 32px;
+            border: 1px solid black;
             padding: 10px;
-            line-height: 1;
+            line-height: 0.9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .food-list {
-            list-style-type: none;
-            padding: 0;
-            margin: 0;
-        }
+        list-style-type: none;
+        padding: 0;
+        margin: 0;
+        border-top: 1px solid black; /* Move the top border to the food list */}
 
         .food-item {
-            border-top: 1px solid black;
-            padding: 15px 0;
-        }
+        border-bottom: 1px solid black; /* Change from border-top to border-bottom */
+        padding: 8px 0;
+    }
+
+    .food-item:last-child {
+        margin-bottom: 0; /* Remove bottom margin from last food item */
+    }
 
         .food-header {
             display: flex;
@@ -66,23 +74,30 @@
         }
 
         .food-name {
-            font-size: 36px;
+            font-size: 32px;
             font-weight: bold;
         }
 
         .food-score {
             border: 1px solid black;
-            padding: 5px 10px;
-            display: inline-block;
+            padding: 1px 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            height: 40px;
+            width: 76px;
+
         }
 
         .food-score-number {
-            font-size: 36px;
+            font-size: 24px;
             font-weight: bold;
         }
 
         .food-score-max {
-            font-size: 24px;
+            font-size: 10px;
+            margin-top: -5px;
         }
 
         .food-details {
@@ -110,9 +125,13 @@
         .rating-value {
             font-size: 24px;
             border: 1px solid black;
-            padding: 3px 8px;
+            padding: 0px;
             width: 80px;
-            display: inline-block;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
         }
 
         .delivery-time {
